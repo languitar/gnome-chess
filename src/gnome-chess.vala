@@ -23,15 +23,8 @@ public class ChessApplication : Gtk.Application
     private Gtk.Container view_container;
     private ChessScene scene;
     private ChessView view;
-    private Gtk.Button pause_resume_button;
-    private Gtk.Widget first_move_button;
-    private Gtk.Widget prev_move_button;
-    private Gtk.Widget next_move_button;
-    private Gtk.Widget last_move_button;
+    private Gtk.Widget navigation_box;
     private Gtk.ComboBox history_combo;
-    private Gtk.Widget white_time_label;
-    private Gtk.Widget black_time_label;
-    private Gtk.Widget timer_increment_label;
     private Gtk.HeaderBar headerbar;
 
     private Gtk.Dialog? preferences_dialog = null;
@@ -42,7 +35,6 @@ public class ChessApplication : Gtk.Application
     private Gtk.Adjustment duration_adjustment;
     private Gtk.Adjustment timer_increment_adjustment;
     private Gtk.Box custom_duration_box;
-    private Gtk.Box timer_increment_box;
     private Gtk.ComboBox timer_increment_units_combo;
     private Gtk.ComboBox custom_duration_units_combo;
     private uint save_duration_timeout = 0;
@@ -83,7 +75,6 @@ Copyright © 2015–2016 Sahil Sareen""";
     private const string SAVE_GAME_AS_ACTION_NAME = "save-as";
     private const string UNDO_MOVE_ACTION_NAME = "undo";
     private const string RESIGN_ACTION_NAME = "resign";
-    private const string PAUSE_RESUME_ACTION_NAME = "pause-resume";
 
     private const ActionEntry[] window_entries =
     {
@@ -93,7 +84,6 @@ Copyright © 2015–2016 Sahil Sareen""";
         { SAVE_GAME_AS_ACTION_NAME, save_game_as_cb },
         { UNDO_MOVE_ACTION_NAME, undo_move_cb },
         { RESIGN_ACTION_NAME, resign_cb },
-        { PAUSE_RESUME_ACTION_NAME, pause_resume_cb },
     };
 
     private const OptionEntry[] option_entries =
@@ -155,19 +145,10 @@ Copyright © 2015–2016 Sahil Sareen""";
         window.size_allocate.connect (size_allocate_cb);
         window.window_state_event.connect (window_state_event_cb);
 
-        pause_resume_button = (Gtk.Button) builder.get_object ("pause_button");
-        first_move_button = (Gtk.Widget) builder.get_object ("first_move_button");
-        prev_move_button = (Gtk.Widget) builder.get_object ("prev_move_button");
-        next_move_button = (Gtk.Widget) builder.get_object ("next_move_button");
-        last_move_button = (Gtk.Widget) builder.get_object ("last_move_button");
-        history_combo = (Gtk.ComboBox) builder.get_object ("history_combo");
-        white_time_label = (Gtk.Widget) builder.get_object ("white_time_label");
-        black_time_label = (Gtk.Widget) builder.get_object ("black_time_label");
         view_container = (Gtk.Container) builder.get_object ("view_container");
         headerbar = (Gtk.HeaderBar) builder.get_object ("headerbar");
+        navigation_box = (Gtk.Widget) builder.get_object ("navigation_box");
         builder.connect_signals (this);
-
-        update_pause_resume_button ();
 
         window.add_action_entries (window_entries, this);
         set_accels_for_action ("win." + NEW_GAME_ACTION_NAME, {"<Primary>N"});
@@ -175,7 +156,6 @@ Copyright © 2015–2016 Sahil Sareen""";
         set_accels_for_action ("win." + SAVE_GAME_ACTION_NAME, {"<Primary>S"});
         set_accels_for_action ("win." + SAVE_GAME_AS_ACTION_NAME, {"<Shift><Primary>S"});
         set_accels_for_action ("win." + UNDO_MOVE_ACTION_NAME, {"<Primary>Z"});
-        set_accels_for_action ("win." + PAUSE_RESUME_ACTION_NAME, {"Pause"});
 
         add_window (window);
 
@@ -403,41 +383,8 @@ Copyright © 2015–2016 Sahil Sareen""";
         }
     }
 
-    private void update_history_panel ()
-    {
-        if (game == null)
-            return;
-
-        var move_number = scene.move_number;
-        var n_moves = (int) game.n_moves;
-        if (move_number < 0)
-            move_number += 1 + n_moves;
-
-        first_move_button.sensitive = n_moves > 0 && move_number != 0 && !game.is_paused;
-        prev_move_button.sensitive = move_number > 0 && !game.is_paused;
-        next_move_button.sensitive = move_number < n_moves && !game.is_paused;
-        last_move_button.sensitive = n_moves > 0 && move_number != n_moves && !game.is_paused;
-        history_combo.sensitive = !game.is_paused;
-
-        /* Set move text for all moves (it may have changed format) */
-        int i = n_moves;
-        foreach (var state in game.move_stack)
-        {
-            if (state.last_move != null)
-            {
-                Gtk.TreeIter iter;
-                if (history_combo.model.iter_nth_child (out iter, null, i))
-                    set_move_text (iter, state.last_move);
-            }
-            i--;
-        }
-
-        history_combo.set_active (move_number);
-    }
-
     private void scene_changed_cb (ChessScene scene)
     {
-        update_history_panel ();
     }
 
     private void start_game ()
@@ -635,20 +582,10 @@ Copyright © 2015–2016 Sahil Sareen""";
         if (moves.length > 0 && game.clock != null)
         {
             game.clock.start ();
-            enable_window_action (PAUSE_RESUME_ACTION_NAME);
-        }
-        else
-        {
-            disable_window_action (PAUSE_RESUME_ACTION_NAME);
         }
 
-        update_history_panel ();
         update_action_status ();
-        update_pause_resume_button ();
         update_headerbar_title ();
-
-        white_time_label.queue_draw ();
-        black_time_label.queue_draw ();
 
         starting = false;
 
@@ -850,8 +787,6 @@ Copyright © 2015–2016 Sahil Sareen""";
     private void game_clock_tick_cb (ChessClock clock)
     {
         check_engine_timeout ();
-        white_time_label.queue_draw ();
-        black_time_label.queue_draw ();
     }
 
     private void game_turn_cb (ChessGame game, ChessPlayer player)
@@ -871,9 +806,6 @@ Copyright © 2015–2016 Sahil Sareen""";
 
         if (!game.is_started)
             return;
-
-        if (game.clock != null)
-            enable_window_action (PAUSE_RESUME_ACTION_NAME);
     }
 
     private void set_move_text (Gtk.TreeIter iter, ChessMove move)
@@ -1115,7 +1047,6 @@ Copyright © 2015–2016 Sahil Sareen""";
 
         enable_window_action (SAVE_GAME_ACTION_NAME);
         enable_window_action (SAVE_GAME_AS_ACTION_NAME);
-        update_history_panel ();
         update_action_status ();
         update_headerbar_title ();
 
@@ -1177,7 +1108,6 @@ Copyright © 2015–2016 Sahil Sareen""";
             disable_window_action (SAVE_GAME_AS_ACTION_NAME);
         }
 
-        update_history_panel ();
         update_action_status ();
         update_headerbar_title ();
     }
@@ -1242,32 +1172,10 @@ Copyright © 2015–2016 Sahil Sareen""";
         }
     }
 
-    private void update_pause_resume_button ()
-    {
-        if (game != null && game.clock == null)
-            pause_resume_button.hide ();
-        else
-            pause_resume_button.show ();
-
-        if (game != null && game.is_paused)
-        {
-            pause_resume_button.image = new Gtk.Image.from_icon_name ("media-playback-start-symbolic",
-                                                                      Gtk.IconSize.BUTTON);
-            pause_resume_button.tooltip_text = _("Unpause the game");
-        }
-        else
-        {
-            pause_resume_button.image = new Gtk.Image.from_icon_name ("media-playback-pause-symbolic",
-                                                                      Gtk.IconSize.BUTTON);
-            pause_resume_button.tooltip_text = _("Pause the game");
-        }
-    }
-
     private void game_end_cb ()
     {
         disable_window_action (RESIGN_ACTION_NAME);
         disable_window_action (UNDO_MOVE_ACTION_NAME);
-        disable_window_action (PAUSE_RESUME_ACTION_NAME);
 
         /* In case of engine desync before the first move, or after undo */
         enable_window_action (NEW_GAME_ACTION_NAME);
@@ -1395,9 +1303,6 @@ Copyright © 2015–2016 Sahil Sareen""";
 
         headerbar.set_title (title);
         headerbar.set_subtitle (reason);
-
-        white_time_label.queue_draw ();
-        black_time_label.queue_draw ();
     }
 
     [CCode (cname = "gnome_chess_app_delete_event_cb", instance_pos = -1)]
@@ -1559,8 +1464,6 @@ Copyright © 2015–2016 Sahil Sareen""";
         else
             game.pause ();
 
-        update_pause_resume_button ();
-        update_history_panel ();
         update_action_status ();
     }
 
@@ -1764,10 +1667,8 @@ Copyright © 2015–2016 Sahil Sareen""";
         duration_adjustment = (Gtk.Adjustment) preferences_builder.get_object ("duration_adjustment");
         timer_increment_adjustment = (Gtk.Adjustment) preferences_builder.get_object ("timer_increment_adjustment");
         custom_duration_box = (Gtk.Box) preferences_builder.get_object ("custom_duration_box");
-        timer_increment_box = (Gtk.Box) preferences_builder.get_object ("timer_increment_box");
         custom_duration_units_combo = (Gtk.ComboBox) preferences_builder.get_object ("custom_duration_units_combo");
         set_duration (settings.get_int ("duration"));
-        timer_increment_label = (Gtk.Widget) preferences_builder.get_object ("timer_increment_label");
         timer_increment_units_combo = (Gtk.ComboBox) preferences_builder.get_object ("timer_increment_units_combo");
 
         if (pgn_game.clock_type != null)
@@ -2146,8 +2047,6 @@ Copyright © 2015–2016 Sahil Sareen""";
         ClockType clock_type;
         combo.model.get (iter, 1, out clock_type, -1);
 
-        timer_increment_box.visible = clock_type > 0;
-        timer_increment_label.visible = clock_type > 0;
         settings.set_string ("clock-type", clock_type.to_string ());
     }
 
