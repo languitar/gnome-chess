@@ -17,6 +17,12 @@ public class ChessApplication : Gtk.Application
     private bool is_maximized;
     private int window_width;
     private int window_height;
+    private bool _simple_mode;
+    private bool simple_mode
+    {
+        get { return _simple_mode; }
+        set { _simple_mode = value; }
+    }
 
     private Settings settings;
     private Gtk.ApplicationWindow window;
@@ -134,6 +140,7 @@ Copyright © 2015–2016 Sahil Sareen""";
         base.startup ();
 
         settings = new Settings ("org.gnome.chess");
+        settings.bind ("simple-mode", this, "simple_mode", SettingsBindFlags.GET);
 
         add_action_entries (app_entries, this);
         Gtk.Builder builder = new Gtk.Builder.from_resource ("/org/gnome/chess/ui/gnome-chess.ui");
@@ -217,7 +224,7 @@ Copyright © 2015–2016 Sahil Sareen""";
             if (game_file == null && FileUtils.test (autosave_filename, FileTest.EXISTS))
                 game_file = File.new_for_path (autosave_filename);
 
-            if (game_file == null)
+            if (simple_mode || game_file == null)
             {
                 start_new_game ();
             }
@@ -422,6 +429,14 @@ Copyright © 2015–2016 Sahil Sareen""";
         try
         {
             game = new ChessGame (fen, moves);
+            game.moved.connect((t, move) => {
+                if (!move.piece.player.local_human)
+                {
+                    var text = move.piece.type.to_string() + " moved";
+                    // TODO say more stuff
+                    say(text);
+                }
+            });
         }
         catch (Error e)
         {
@@ -1303,6 +1318,20 @@ Copyright © 2015–2016 Sahil Sareen""";
 
         headerbar.set_title (title);
         headerbar.set_subtitle (reason);
+
+        say(title + ". " + reason);
+    }
+
+    private async void say(string text)
+    {
+        ThreadFunc<bool> run = () => {
+            string command = "bash -c \"(flock -e 200; curl -sS 'http://localhost:59125/process?INPUT_TYPE=TEXT&AUDIO=WAVE_FILE&OUTPUT_TYPE=AUDIO&LOCALE=DE&INPUT_TEXT=" + Uri.escape_string(text) + "' | aplay -f S16_LE -r 16000) 200>/tmp/speaking\"";
+            stdout.printf("%s\n", command);
+            Posix.system(command);
+            return true;
+        };
+        new Thread<bool>("say-task", run);
+        yield;
     }
 
     [CCode (cname = "gnome_chess_app_delete_event_cb", instance_pos = -1)]
@@ -1406,7 +1435,7 @@ Copyright © 2015–2016 Sahil Sareen""";
 
     public void new_game_cb ()
     {
-        if (prompt_save_game (_("Save this game before starting a new one?")))
+        if (simple_mode || prompt_save_game (_("Save this game before starting a new one?")))
             start_new_game ();
     }
 
@@ -1635,6 +1664,8 @@ Copyright © 2015–2016 Sahil Sareen""";
         settings.bind ("show-numbering", preferences_builder.get_object ("show_numbering_check"),
                        "active", SettingsBindFlags.DEFAULT);
         settings.bind ("show-move-hints", preferences_builder.get_object ("show_move_hints_check"),
+                       "active", SettingsBindFlags.DEFAULT);
+        settings.bind ("simple-mode", preferences_builder.get_object ("simple_mode_check"),
                        "active", SettingsBindFlags.DEFAULT);
 
         side_combo = (Gtk.ComboBox) preferences_builder.get_object ("side_combo");

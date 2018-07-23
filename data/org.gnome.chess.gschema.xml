@@ -58,6 +58,11 @@
       <summary>A flag to enable move hints</summary>
       <description>A flag to enable move hints</description>
     </key>
+    <key name="simple-mode" type="b">
+      <default>false</default>
+      <summary>A flag to enable a simple mode</summary>
+      <description>A flag to enable a simple mode</description>
+    </key>
     <key name="show-numbering" type="b">
       <default>false</default>
       <summary>A flag to enable board numbering</summary>

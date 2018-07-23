@@ -16,7 +16,32 @@ public enum PieceType
     KNIGHT,
     BISHOP,
     QUEEN,
-    KING
+    KING;
+
+    public string to_string() {
+        switch (this) {
+            case PAWN:
+                return _("Pawn");
+
+            case ROOK:
+                return _("Rook");
+
+            case KNIGHT:
+                return _("Knight");
+
+            case BISHOP:
+                return _("Bishop");
+
+            case QUEEN:
+                return _("Queen");
+
+            case KING:
+                return _("King");
+
+            default:
+                assert_not_reached();
+        }
+    }
 }
 
 public class ChessPiece : Object
