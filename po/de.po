@@ -87,7 +87,11 @@ msgstr "gnome-chess"
 
 #: data/gnome-chess.ui:27
 msgid "_New Game"
-msgstr "_Neues Spiel"
+msgstr "_Neu"
+
+#: data/gnome-chess.ui:27
+msgid "Undo"
+msgstr "Zurück"
 
 #: data/gnome-chess.ui:40
 msgid "Undo your most recent move"
@@ -989,19 +993,19 @@ msgstr "Schwarzer König bei %1$s schlägt weiße Dame bei %2$s"
 
 #: src/gnome-chess.vala:1051
 msgid "White castles kingside"
-msgstr "Weißer Turm Königsflügel"
+msgstr "Weißer Turm Rochade Königsflügel"
 
 #: src/gnome-chess.vala:1055
 msgid "White castles queenside"
-msgstr "Weißer Turm Damenflügel"
+msgstr "Weißer Turm Rochade Damenflügel"
 
 #: src/gnome-chess.vala:1059
 msgid "Black castles kingside"
-msgstr "Schwarzer Turm Königsflügel"
+msgstr "Schwarzer Turm Rochade Königsflügel"
 
 #: src/gnome-chess.vala:1063
 msgid "Black castles queenside"
-msgstr "Schwarzer Turm Frauenflügel"
+msgstr "Schwarzer Turm Rochade Frauenflügel"
 
 #. Window title on a White human's turn if he is in check
 #: src/gnome-chess.vala:1202
@@ -1326,3 +1330,29 @@ msgstr "Ö_ffnen"
 #: src/gnome-chess.vala:2428
 msgid "Failed to open game"
 msgstr "Das Spiel konnte nicht geöffnet werden."
+
+#: src/gnome-chess.vala:400
+#, c-format
+msgid "%s selected"
+msgstr "%s"
+
+msgid "Pawn"
+msgstr "Bauer"
+
+msgid "King"
+msgstr "König"
+
+msgid "Queen"
+msgstr "Dame"
+
+msgid "Bishop"
+msgstr "Läufer"
+
+msgid "Knight"
+msgstr "Springer"
+
+msgid "Rook"
+msgstr "Turm"
+
+msgid "Select the type of piece to replace the pawn with"
+msgstr "Wähle die Figur aus, mit der der Bauer ersetzt werden soll"

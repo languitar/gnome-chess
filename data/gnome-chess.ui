@@ -148,6 +148,7 @@
                         <property name="receives_default">False</property>
                         <property name="halign">center</property>
                         <property name="valign">center</property>
+                        <property name="border_width">4</property>
                         <property name="action_name">win.new</property>
                         <property name="use_underline">True</property>
                         <style>
@@ -185,7 +186,9 @@
                         <property name="receives_default">False</property>
                         <property name="tooltip_text" translatable="yes">Undo your most recent move</property>
                         <property name="valign">center</property>
+                        <property name="border_width">4</property>
                         <property name="action_name">win.undo</property>
+                        <property name="use_underline">True</property>
                         <style>
                           <class name="image-button"/>
                         </style>

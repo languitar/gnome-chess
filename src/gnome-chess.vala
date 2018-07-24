@@ -168,7 +168,7 @@ Copyright © 2015–2016 Sahil Sareen""";
 
         scene = new ChessScene ();
         scene.is_human.connect ((p) => { return p == human_player; });
-        scene.changed.connect (scene_changed_cb);
+        scene.selection_changed.connect (selection_changed_cb);
         scene.choose_promotion_type.connect (show_promotion_type_selector);
 
         settings.bind ("show-move-hints", scene, "show-move-hints", SettingsBindFlags.GET);
@@ -302,6 +302,8 @@ Copyright © 2015–2016 Sahil Sareen""";
 
         promotion_type_selector_builder.connect_signals (this);
 
+        say(_("Select the type of piece to replace the pawn with"));
+
         PieceType? selection = null;
         int choice = promotion_type_selector_dialog.run ();
         switch (choice)
@@ -326,9 +328,8 @@ Copyright © 2015–2016 Sahil Sareen""";
 
     private void set_piece_image (Gtk.Image image, string filename)
     {
-        int width, height;
-        if (!Gtk.icon_size_lookup (Gtk.IconSize.DIALOG, out width, out height))
-            return;
+        int width = 120;
+        int height = width;
 
         try
         {
@@ -342,6 +343,7 @@ Copyright © 2015–2016 Sahil Sareen""";
             h.render_cairo (c);
 
             var p = Gdk.pixbuf_get_from_surface (s, 0, 0, width, height);
+            p = p.scale_simple(p.get_width () * 2, p.get_height() * 2, Gdk.InterpType.BILINEAR);
             image.set_from_pixbuf (p);
         }
         catch (Error e)
@@ -390,8 +392,16 @@ Copyright © 2015–2016 Sahil Sareen""";
         }
     }
 
-    private void scene_changed_cb (ChessScene scene)
+    private void selection_changed_cb ()
     {
+        // notify about the selected piece
+        foreach (var piece in scene.pieces)
+        {
+            if (piece.is_selected)
+            {
+                say (_("%s selected").printf (piece.piece.type.to_string ()));
+            }
+        }
     }
 
     private void start_game ()
@@ -612,6 +622,8 @@ Copyright © 2015–2016 Sahil Sareen""";
         // If loading a completed saved game
         if (game.result != ChessResult.IN_PROGRESS)
             game.stop (game.result, ChessRule.UNKNOWN);
+
+        show_promotion_type_selector ();
     }
 
     private ChessEngine? get_engine (string name, string difficulty)

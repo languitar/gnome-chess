@@ -80,6 +80,7 @@ public class ChessScene : Object
     public signal bool is_human (ChessPlayer player);
     public signal PieceType? choose_promotion_type ();
     public signal void changed ();
+    public signal void selection_changed ();
 
     public int selected_rank = -1;
     public int selected_file = -1;
@@ -286,6 +287,7 @@ public class ChessScene : Object
         var board_changed = false;
         var need_animation = false;
         List<ChessModel> new_pieces = null;
+        var did_selection_change = false;
         for (int rank = 0; rank < 8; rank++)
         {
             for (int file = 0; file < 8; file++)
@@ -314,13 +316,25 @@ public class ChessScene : Object
                 }
 
                 if (move_number == -1 && rank == selected_rank && file == selected_file)
+                {
+                    did_selection_change = did_selection_change | !model.is_selected;
                     model.is_selected = true;
+                }
                 else
+                {
+                    did_selection_change = did_selection_change | model.is_selected;
                     model.is_selected = false;
+                }
 
                 new_pieces.append (model);
             }
         }
+
+        if (did_selection_change)
+        {
+            selection_changed();
+        }
+
         /* If only removed pieces then the lengths will be different */
         if (new_pieces.length () != pieces.length ())
             board_changed = true;
