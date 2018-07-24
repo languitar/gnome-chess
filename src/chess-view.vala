@@ -247,7 +247,7 @@ public class ChessView : Gtk.DrawingArea
         }
 
         /* Highlight checks */
-        if (scene.show_move_hints && current_state.check_state != CheckState.NONE)
+        if (scene.show_move_hints && current_state.check_state != CheckState.NONE && current_state.current_player.local_human)
         {
             for (int index = 0; index < current_state.board.length; index++)
             {
