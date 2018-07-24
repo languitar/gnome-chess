@@ -432,9 +432,7 @@ Copyright © 2015–2016 Sahil Sareen""";
             game.moved.connect((t, move) => {
                 if (!move.piece.player.local_human)
                 {
-                    var text = move.piece.type.to_string() + " moved";
-                    // TODO say more stuff
-                    say(text);
+                    say (get_human_move_text (move));
                 }
             });
         }
@@ -823,7 +821,7 @@ Copyright © 2015–2016 Sahil Sareen""";
             return;
     }
 
-    private void set_move_text (Gtk.TreeIter iter, ChessMove move)
+    private string get_human_move_text (ChessMove move)
     {
         /* Note there are no move formats for pieces taking kings and this is not allowed in Chess rules */
         const string human_descriptions[] = {/* Human Move String: Description of a white pawn moving from %1$s to %2s, e.g. 'c2 to c4' */
@@ -972,44 +970,61 @@ Copyright © 2015–2016 Sahil Sareen""";
                                              N_("Black king at %1$s takes the white queen at %2$s")};
 
         var move_text = "";
+        if (move.en_passant)
+        {
+            if (move.r0 < move.r1)
+                move_text = _("White pawn captures black pawn en passant");
+            else
+                move_text = _("Black pawn captures white pawn en passant");
+        }
+        else if (move.castling_rook != null)
+        {
+            if (move.f0 < move.f1 && move.r0 == 0)
+                move_text = _("White castles kingside");
+            else if (move.f1 < move.f0 && move.r0 == 0)
+                move_text = _("White castles queenside");
+            else if (move.f0 < move.f1 && move.r0 == 7)
+                move_text = _("Black castles kingside");
+            else if (move.f1 < move.f0 && move.r0 == 7)
+                move_text = _("Black castles queenside");
+            else
+                assert_not_reached ();
+        }
+        else
+        {
+            int index;
+            if (move.victim == null)
+                index = 0;
+            else
+                index = move.victim.type + 1;
+            index += move.piece.type * 6;
+            if (move.piece.player.color == Color.BLACK)
+                index += 36;
+
+            var start = "%c%d".printf ('a' + move.f0, move.r0 + 1);
+            var end = "%c%d".printf ('a' + move.f1, move.r1 + 1);
+            move_text = _(human_descriptions[index]).printf (start, end);
+        }
+
+        // detect check
+        if (move.check_state == CheckState.CHECK)
+        {
+            if (move.piece.player.color == Color.BLACK)
+                move_text = move_text + ". " +_("White is in Check");
+            else
+                move_text = move_text + ". " +_("Black is in Check");
+        }
+
+        return move_text;
+    }
+
+    private void set_move_text (Gtk.TreeIter iter, ChessMove move)
+    {
+        var move_text = "";
         switch (scene.move_format)
         {
         case "human":
-            if (move.en_passant)
-            {
-                if (move.r0 < move.r1)
-                    move_text = _("White pawn captures black pawn en passant");
-                else
-                    move_text = _("Black pawn captures white pawn en passant");
-            }
-            else if (move.castling_rook != null)
-            {
-                if (move.f0 < move.f1 && move.r0 == 0)
-                    move_text = _("White castles kingside");
-                else if (move.f1 < move.f0 && move.r0 == 0)
-                    move_text = _("White castles queenside");
-                else if (move.f0 < move.f1 && move.r0 == 7)
-                    move_text = _("Black castles kingside");
-                else if (move.f1 < move.f0 && move.r0 == 7)
-                    move_text = _("Black castles queenside");
-                else
-                    assert_not_reached ();
-            }
-            else
-            {
-                int index;
-                if (move.victim == null)
-                    index = 0;
-                else
-                    index = move.victim.type + 1;
-                index += move.piece.type * 6;
-                if (move.piece.player.color == Color.BLACK)
-                    index += 36;
-
-                var start = "%c%d".printf ('a' + move.f0, move.r0 + 1);
-                var end = "%c%d".printf ('a' + move.f1, move.r1 + 1);
-                move_text = _(human_descriptions[index]).printf (start, end);
-            }
+            move_text = get_human_move_text (move);
             break;
 
         case "san":
@@ -1324,8 +1339,12 @@ Copyright © 2015–2016 Sahil Sareen""";
 
     private async void say(string text)
     {
+        foreach (var elem in Intl.get_language_names ())
+        {
+            stdout.printf("%s\n", elem);
+        }
         ThreadFunc<bool> run = () => {
-            string command = "bash -c \"(flock -e 200; curl -sS 'http://localhost:59125/process?INPUT_TYPE=TEXT&AUDIO=WAVE_FILE&OUTPUT_TYPE=AUDIO&LOCALE=DE&INPUT_TEXT=" + Uri.escape_string(text) + "' | aplay -f S16_LE -r 16000) 200>/tmp/speaking\"";
+            string command = "bash -c \"(flock -e 200; curl -sS 'http://localhost:59125/process?INPUT_TYPE=TEXT&AUDIO=WAVE_FILE&OUTPUT_TYPE=AUDIO&LOCALE=DE&INPUT_TEXT=" + Uri.escape_string(text, null, false) + "' | aplay -f S16_LE -r 16000) 200>/tmp/speaking\"";
             stdout.printf("%s\n", command);
             Posix.system(command);
             return true;
