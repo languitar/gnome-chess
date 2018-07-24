@@ -622,8 +622,6 @@ Copyright © 2015–2016 Sahil Sareen""";
         // If loading a completed saved game
         if (game.result != ChessResult.IN_PROGRESS)
             game.stop (game.result, ChessRule.UNKNOWN);
-
-        show_promotion_type_selector ();
     }
 
     private ChessEngine? get_engine (string name, string difficulty)
