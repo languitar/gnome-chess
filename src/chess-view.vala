@@ -12,7 +12,7 @@
 
 public class ChessView : Gtk.DrawingArea
 {
-    private int border = 6;
+    private int border = 0;
     private int square_size;
     private int selected_square_size;
     private Cairo.ImageSurface? model_surface;
@@ -33,7 +33,7 @@ public class ChessView : Gtk.DrawingArea
 
     private double border_size
     {
-        get { return square_size / 2; }
+        get { return square_size / 10; }
     }
 
     public ChessView ()
@@ -45,7 +45,7 @@ public class ChessView : Gtk.DrawingArea
     {
         int short_edge = int.min (get_allocated_width (), get_allocated_height ());
 
-        square_size = (int) Math.floor ((short_edge - 2 * border) / 9.0);
+        square_size = (int) Math.floor ((short_edge - 2 * border) / 8.1);
         var extra = square_size * 0.1;
         if (extra < 3)
             extra = 3;
@@ -107,6 +107,22 @@ public class ChessView : Gtk.DrawingArea
         loaded_theme_name = scene.theme_name;
     }
 
+    private void draw_rectangle (Cairo.Context c, int file, int rank, double r, double g, double b)
+    {
+        c.save ();
+
+        int tile_stroke_width = int.max (2, (int) (0.07 * square_size));
+
+        int x = (int) ((file - 4) * square_size) + (tile_stroke_width / 2);
+        int y = (int) ((3 - rank) * square_size) + (tile_stroke_width / 2);
+        c.rectangle (x, y, square_size - tile_stroke_width, square_size - tile_stroke_width);
+        c.set_source_rgb (r, g, b);
+        c.set_line_width (tile_stroke_width);
+        c.stroke();
+
+        c.restore ();
+    }
+
     public override bool draw (Cairo.Context c)
     {
         load_theme (c);
@@ -129,7 +145,7 @@ public class ChessView : Gtk.DrawingArea
 
                 c.rectangle (x, y, square_size, square_size);
                 if ((file + rank) % 2 == 0)
-                    c.set_source_rgb (0xba/255.0, 0xbd/255.0, 0xb6/255.0);
+                    c.set_source_rgb (0.6, 0.6, 0.6);
                 else
                     c.set_source_rgb (0xee/255.0, 0xee/255.0, 0xec/255.0);
                 c.fill ();
@@ -221,20 +237,26 @@ public class ChessView : Gtk.DrawingArea
             return true;
         }
 
-        /* Draw the pieces */
-        foreach (var model in scene.pieces)
+        /* Highlight last moved piece */
+        var current_state = scene.game.current_state;
+        var last_move = current_state.last_move;
+        if (scene.show_move_hints && last_move != null && !last_move.piece.player.local_human)
         {
-            c.save ();
-            c.translate ((model.x - 4) * square_size, (3 - model.y) * square_size);
-            c.translate (square_size / 2, square_size / 2);
-            c.rotate (-Math.PI * scene.board_angle / 180.0);
+            draw_rectangle (c, last_move.f0, last_move.r0, 0.3, 0.3, 0.8);
+            draw_rectangle (c, last_move.f1, last_move.r1, 0.3, 0.3, 0.8);
+        }
 
-            draw_piece (c,
-                        model.is_selected ? selected_model_surface : model_surface,
-						model.is_selected ? selected_square_size : square_size,
-                        model.piece, model.under_threat && scene.show_move_hints ? 0.8 : 1.0);
-
-            c.restore ();
+        /* Highlight checks */
+        if (scene.show_move_hints && current_state.check_state != CheckState.NONE)
+        {
+            for (int index = 0; index < current_state.board.length; index++)
+            {
+                var piece = current_state.board[index];
+                if (piece != null && piece.type == PieceType.KING && piece.player.local_human)
+                {
+                    draw_rectangle (c, current_state.get_file (index), current_state.get_rank (index), 0.9, 0.3, 0.3);
+                }
+            }
         }
 
         /* Draw shadow piece on squares that can be moved to */
@@ -244,16 +266,29 @@ public class ChessView : Gtk.DrawingArea
             {
                 if (scene.show_move_hints && scene.can_move (rank, file))
                 {
-                    c.save ();
-                    c.translate ((file - 4) * square_size, (3 - rank) * square_size);
-                    c.translate (square_size / 2, square_size / 2);
-                    c.rotate (-Math.PI * scene.board_angle / 180.0);
-
-                    draw_piece (c, model_surface, square_size, scene.get_selected_piece (), 0.1);
-
-                    c.restore ();
+                    draw_rectangle (c, file, rank, 0.0, 0.8, 0.0);
                 }
             }
+        }
+
+        /* Draw the pieces */
+        foreach (var model in scene.pieces)
+        {
+            c.save ();
+            c.translate ((model.x - 4) * square_size, (3 - model.y) * square_size);
+            c.translate (square_size / 2, square_size / 2);
+            c.rotate (-Math.PI * scene.board_angle / 180.0);
+
+            if (model.under_threat)
+            {
+                stdout.printf("under threat\n");
+            }
+            draw_piece (c,
+                        model.is_selected ? selected_model_surface : model_surface,
+						model.is_selected ? selected_square_size : square_size,
+                        model.piece, model.under_threat && scene.show_move_hints ? 0.8 : 1.0);
+
+            c.restore ();
         }
 
         return true;
