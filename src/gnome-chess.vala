@@ -1096,7 +1096,7 @@ Copyright © 2015–2016 Sahil Sareen""";
          * redraw first, so the pieces are shown to move before displaying the
          * claim draw dialog. */
         Timeout.add(100, () => {
-            if (game.can_claim_draw ())
+            if (game.can_claim_draw () && !simple_mode)
                 present_claim_draw_dialog ();
 
             if (opponent_engine != null)
