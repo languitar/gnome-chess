@@ -18,7 +18,7 @@ public class ChessApplication : Gtk.Application
     private int window_width;
     private int window_height;
     private bool _simple_mode;
-    private bool simple_mode
+    public bool simple_mode
     {
         get { return _simple_mode; }
         set { _simple_mode = value; }
@@ -140,7 +140,7 @@ Copyright © 2015–2016 Sahil Sareen""";
         base.startup ();
 
         settings = new Settings ("org.gnome.chess");
-        settings.bind ("simple-mode", this, "simple_mode", SettingsBindFlags.GET);
+        settings.bind ("simple-mode", this, "simple-mode", SettingsBindFlags.GET);
 
         add_action_entries (app_entries, this);
         Gtk.Builder builder = new Gtk.Builder.from_resource ("/org/gnome/chess/ui/gnome-chess.ui");
